@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Audición</title>
+    <!-- Importar Bootstrap y GFonts -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: "Inter", sans-serif;
+            font-optical-sizing: auto;
+            font-style: normal;
+        }
+    </style>
+</head>
+<body>
+    <div style="height: 80vh;" class="container-md px-3 px-md-4 px-lg-5 my-5 text-center text-sm-start">
+        <h3 class="ms-1">Test de audición</h3>
+        <hr>
+        <form action="/submit" method="POST" id="form1">
+            <div id="form" class="ms-1 row g-3">
+                <div class="col-sm-6">
+                    <label for="edad" class="form-label">¿Cuál es tu edad?</label>
+                    <input type="number" id="edad" name="age" class="form-control" max="99" min="10" maxlength="2" required>
+                </div>
+    
+                <div class="col-sm-6">
+                    <label for="sexo" class="form-label">¿Cuál es tu sexo?</label>
+                    <select class="form-select" id="sexo" name="sex" required>
+                        <option value="F">Femenino</option>
+                        <option value="M">Masculino</option>
+                    </select>
+                </div>
+    
+                <div class="col-sm-6 pt-sm-4">
+                    <label for="audifonos" class="form-label">¿Cuántas horas al día ocupas audífonos?</label>
+                    <input type="number" id="audifonos" name="audifonos" class="form-control" max="24" min="0" maxlength="2" required>
+                </div>
+    
+                <div class="col-sm-6">
+                    <label for="volume" class="form-label">¿Cuál es el volumen con el que escuchas contenidos en tus dispositivos?</label>
+                    <select class="form-select" id="volume" name="volume" required>
+                        <option value="A">Alto</option>
+                        <option value="M">Medio</option>
+                        <option value="B">Bajo</option>
+                    </select>
+                </div>
+    
+                <div class="col">
+                    <div class="form-check">
+                        <label for="noise_cancelation" class="form-label">¿Ocupas cancelación de ruido?</label>
+                        <input class="form-check-input" type="checkbox" value="True" name="noise" id="checkDefault">
+                    </div>
+                </div>
+                <input type="hidden" name="max_frequency" id="maxFrequency" value="">
+    
+                {% csrf_token %}
+    
+                <div class="col-12">
+                    <!-- make this a non-submitting button so JS controls the flow -->
+                    <button type="button" class="btn btn-success" id="start">Iniciar Test</button>
+                </div>
+            </div>
+            <div id="test" class="h-100 mt-4 text-center justify-content-center align-content-center">
+                <div id="testt">
+                    <h1 id="counter">0 hz</h1>
+                    <button class="btn btn-success" type="button" id="start1">Iniciar Test de Audición</button>
+                    <input value="Detener Test" class="btn btn-danger" type="button" id="stop">
+                </div>
+            </div>
+        </form>
+    </div>
+    <script>
+        const form = document.getElementById('form');
+        const formForm = document.getElementById('form1');
+        const stopBtn = document.getElementById('stop');
+        const test =  document.getElementById('test');
+        const startBtn = document.getElementById('start1');
+
+        test.style.display = 'none';
+        stopBtn.style.display = 'none';
+
+        document.getElementById('start').addEventListener('click', (e) => {
+            // Validate using built-in HTML5 constraints first. If invalid, show messages and stop.
+            if (!formForm.checkValidity()) {
+                formForm.reportValidity();
+                return; // do not proceed to hide the form
+            }
+            
+            e.preventDefault();
+            // If valid, prevent the default submission and show the test UI
+            form.style.display = 'none';
+            test.style.display = 'block';
+        });
+
+        function playNote(audioCtx, frequency, duration) {
+            const oscillator = audioCtx.createOscillator();
+
+            oscillator.type = 'square';
+            oscillator.frequency.value = frequency;
+            oscillator.connect(audioCtx.destination);
+            oscillator.start();
+
+            setTimeout(() => {
+                    oscillator.stop();
+                },
+            duration);
+        }
+
+        startBtn.addEventListener('click', () => {
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+
+            const audioCtx = new AudioContext();
+            let stopped = false;
+
+            stopBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById("testt").style.display = 'none';
+
+                stopBtn.disabled = true;
+                stopped = true;
+                audioCtx.close();
+
+                // Submit via fetch (AJAX) to avoid a full page reload.
+                // The form contains the Django CSRF hidden input, so sending FormData is sufficient.
+                const formData = new FormData(formForm);
+                fetch(formForm.action, {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(() => {
+                    const textH1 = document.createElement("h1")
+                    textH1.innerText = "Gracias por completar el test de audición.";
+                    test.appendChild(textH1);
+                })
+                .catch((err) => {
+                    console.error('AJAX submit failed, falling back to normal submit', err);
+                    // fallback: do a normal submit so the data isn't lost
+                    formForm.submit();
+                });
+            });
+
+            for (let i = 1; i <= 23000; i++) {
+                setTimeout(() => {
+                    if (stopped) return;
+                    playNote(audioCtx, i, 2);
+                    document.getElementById('counter').innerText = `${i} Hz`;
+                    document.getElementById('maxFrequency').value = i;
+                }, 5 * i);
+            }
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+</body>
+</html>
