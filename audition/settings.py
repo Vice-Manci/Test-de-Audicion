@@ -75,8 +75,12 @@ WSGI_APPLICATION = 'audition.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'ola',
+        'USER': 'user',
+        'PASSWORD': '7IFm38PIMuTakgzEPyfyMFXMGrfTnzrM',
+        'HOST': 'postgresql://user:7IFm38PIMuTakgzEPyfyMFXMGrfTnzrM@dpg-d4gdbih5pdvs73dtokd0-a.oregon-postgres.render.com/ola_4hcn',
+        'PORT': '5432',
     }
 }
 
